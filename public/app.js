@@ -190,12 +190,18 @@ let itineraryView = "calendar"; // "calendar" | "list"
 let selectedDayIndex = 0;
 let itineraryDays = [];
 let planWeather = {}; // { "YYYY-MM-DD": {mode, tmax, tmin, icon, label} }
+let planLocations = []; // [{name, lat, lng}] — only those that geocoded
+let tripMap = null; // Leaflet map instance (recreated per calendar render)
+let cityMarkers = {}; // city name -> Leaflet marker
 
 function renderPlan(plan) {
   activeMenuIndex = 0;
   activeCityIndex = 0;
   selectedDayIndex = 0;
   planWeather = plan.weather || {};
+  planLocations = (plan.trip_summary?.locations || []).filter(
+    (l) => typeof l.lat === "number" && typeof l.lng === "number",
+  );
   renderSummary(plan.trip_summary);
   renderMenus(plan.idea_menus);
   renderItinerary(plan.itinerary);
@@ -229,6 +235,52 @@ function weatherLine(dateIso) {
   const mode = w.mode === "forecast" ? "Forecast" : "Typical for the dates";
   const label = w.label ? escapeHtml(w.label) + " · " : "";
   return `<div class="wx-line">${w.icon} ${label}${w.tmax}° / ${w.tmin}°<span class="wx-mode">${mode}</span></div>`;
+}
+
+// ── Itinerary map (Leaflet, city-level pins) ─────────────────────────────
+function destroyMap() {
+  if (tripMap) {
+    tripMap.remove();
+    tripMap = null;
+    cityMarkers = {};
+  }
+}
+
+// Pan the map to the currently selected day's city and open its popup.
+function focusMapOnSelectedDay() {
+  if (!tripMap) return;
+  const day = itineraryDays[selectedDayIndex];
+  const marker = day && cityMarkers[day.location];
+  if (marker) {
+    tripMap.setView(marker.getLatLng(), 11, { animate: true });
+    marker.openPopup();
+  }
+}
+
+// Build the map for the plan's locations. No-op if Leaflet didn't load or
+// there are no coordinates (so a CDN/geocoding failure degrades gracefully).
+function buildTripMap(mapEl) {
+  if (!mapEl || !window.L || !planLocations.length) return;
+  destroyMap();
+  tripMap = L.map(mapEl, { scrollWheelZoom: false });
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "&copy; OpenStreetMap contributors",
+    maxZoom: 19,
+  }).addTo(tripMap);
+
+  const latlngs = [];
+  for (const loc of planLocations) {
+    cityMarkers[loc.name] = L.marker([loc.lat, loc.lng])
+      .addTo(tripMap)
+      .bindPopup(escapeHtml(loc.name));
+    latlngs.push([loc.lat, loc.lng]);
+  }
+  if (latlngs.length > 1) tripMap.fitBounds(latlngs, { padding: [30, 30] });
+  else tripMap.setView(latlngs[0], 11);
+
+  // The container is sized by CSS after init; recompute once it's laid out.
+  setTimeout(() => tripMap && tripMap.invalidateSize(), 0);
+  focusMapOnSelectedDay();
 }
 
 function renderSummary(summary) {
@@ -405,6 +457,7 @@ function renderItinerary(days) {
 }
 
 function renderItineraryList(container) {
+  destroyMap(); // the map only lives in the calendar view
   container.innerHTML = itineraryDays
     .map((day) => `<div class="card day-card">${dayDetailHtml(day)}</div>`)
     .join("");
@@ -450,6 +503,7 @@ function renderItineraryCalendar(container) {
         <div class="cal-grid cal-days">${blanks}${cells}</div>
       </div>
       <div class="card cal-detail" id="cal-detail"></div>
+      ${planLocations.length ? '<div class="trip-map" id="trip-map"></div>' : ""}
     </div>`;
 
   const detail = container.querySelector("#cal-detail");
@@ -466,6 +520,9 @@ function renderItineraryCalendar(container) {
         .forEach((c) => c.classList.remove("selected"));
       btn.classList.add("selected");
       paintDetail();
+      focusMapOnSelectedDay();
     });
   });
+
+  buildTripMap(container.querySelector("#trip-map"));
 }

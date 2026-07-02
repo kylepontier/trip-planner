@@ -595,6 +595,21 @@ button:focus-visible {
   min-height: 120px;
 }
 
+.trip-map {
+  height: 300px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-l);
+  overflow: hidden;
+  z-index: 0; /* keep tiles/controls under any app overlays */
+}
+
+/* Soften OSM's bright tiles in dark mode so the map isn't a white slab. */
+:root[data-theme="dark"] .trip-map .leaflet-tile,
+:root[data-theme="dark"] .trip-map .leaflet-control {
+  filter: brightness(0.65) invert(1) contrast(1.05) hue-rotate(190deg)
+    saturate(0.7);
+}
+
 /* ── Idea menus ──────────────────────────────────────────── */
 .idea {
   border-top: 1px solid var(--line-2);
