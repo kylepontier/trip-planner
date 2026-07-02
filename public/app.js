@@ -266,6 +266,17 @@ function cityCoords(name) {
   return planLocations.find((l) => l.name === name) || null;
 }
 
+// True if we have anything to map — city coords (from weather geocoding) or
+// per-activity coords — so the two features can be toggled independently.
+function hasMapCoords() {
+  return (
+    planLocations.length > 0 ||
+    itineraryDays.some((d) =>
+      (d.slots || []).some((s) => typeof s.lat === "number"),
+    )
+  );
+}
+
 // Show the selected day's activity pins, fitting the map to them. If none of
 // that day's activities could be located, fall back to the city.
 function showDayOnMap(dayIndex) {
@@ -302,7 +313,7 @@ function showDayOnMap(dayIndex) {
 // Build the map. No-op if Leaflet didn't load or there are no coordinates (so a
 // CDN/geocoding failure degrades gracefully to no map).
 function buildTripMap(mapEl) {
-  if (!mapEl || !window.L || !planLocations.length) return;
+  if (!mapEl || !window.L || !hasMapCoords()) return;
   destroyMap();
   tripMap = L.map(mapEl, { scrollWheelZoom: false });
   L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -540,7 +551,7 @@ function renderItineraryCalendar(container) {
         <div class="cal-grid cal-days">${blanks}${cells}</div>
       </div>
       <div class="card cal-detail" id="cal-detail"></div>
-      ${planLocations.length ? '<div class="trip-map" id="trip-map"></div>' : ""}
+      ${hasMapCoords() ? '<div class="trip-map" id="trip-map"></div>' : ""}
     </div>`;
 
   const detail = container.querySelector("#cal-detail");

@@ -31,6 +31,7 @@ your operating system's setting.
   - `index.js` — tiny web server; serves `public/` and exposes `/api/plan`.
   - `planner.js` — builds the Claude requests and returns the plan as structured JSON.
   - `weather.js` — geocodes each location and fetches weather from Open-Meteo.
+  - `geocode.js` — geocodes each activity's venue (Photon) for the map pins.
   - `config.js` — model choice and feature toggles (change behavior here).
 
 When you submit the form, the server builds the plan in **three stages**:
@@ -42,9 +43,9 @@ When you submit the form, the server builds the plan in **three stages**:
 2. **Planning** — a second call that takes your trip parameters plus that verified brief
    and returns the full plan as structured JSON (a fixed schema), including a real "More
    info" link per activity when one is known — so the UI can render it cleanly every time.
-3. **Enrich** — the server geocodes each location and attaches real weather and map
-   coordinates from Open-Meteo. This is real fetched data, not model output, so it lives
-   outside the model's JSON.
+3. **Enrich** — the server attaches real fetched data (not model output, so it lives
+   outside the model's JSON): weather and location coordinates from Open-Meteo, and a map
+   coordinate for each activity's venue from Photon.
 
 The itinerary places any fixed commitments first, then fills the open
 morning/afternoon/evening slots around them, balancing kids of different ages, with a
@@ -91,11 +92,13 @@ is hard to scan — pick the type, then the city.
 only lets `http(s)` links render, so a `javascript:`/`data:` URL can never become a live
 link.
 
-**The map is rudimentary on purpose.** It uses Leaflet + free OpenStreetMap tiles (no API
-key) and pins each city, syncing to the calendar (pick a day → pan to its city). Pins are
-**city-level**, not per-activity: geocoding every attraction reliably is heavy and
-error-prone, so city-level spatial awareness is the honest first version. It degrades to no
-map if Leaflet fails to load or coordinates are missing.
+**The map pins each day's activities.** It uses Leaflet + free OpenStreetMap tiles (no API
+key). Selecting a day in the calendar shows that day's activity pins, fit to bounds; it
+falls back to a city pin when a day's activities can't be located, and to no map at all if
+Leaflet fails to load. Reliable geocoding needed a dedicated clean `place` (bare venue
+name) per activity, separate from the descriptive title — geocoding the embellished title
+directly barely worked (one live plan went from 1/6 to 6/6 activities located once the
+model supplied a clean place name).
 
 **Fluent 2 styling in plain CSS.** The UI matches Microsoft's Fluent 2 design language
 through CSS design tokens rather than a component library — no build step and no runtime
@@ -152,8 +155,8 @@ You need [Node.js](https://nodejs.org) version 18 or newer (`node --version` to 
      link when one is known.
    - **Day-by-day itinerary** — toggle **Calendar** or **List**. In the calendar, each day
      shows its weather and a dot for fixed commitments; click a day to see its full details
-     (weather, commitments, and each slot's rationale and link) and to pan the map to that
-     day's city.
+     (weather, commitments, and each slot's rationale and link) and to plot that day's
+     activities on the map.
 
 Use the ☀️/🌙 button in the top-right to switch light/dark themes. It follows your OS by
 default and remembers a manual choice.
@@ -171,8 +174,10 @@ Also in `server/config.js`:
 - `ENABLE_WEB_SEARCH = true` — set to `false` to skip the research phase and plan from the
   model's own knowledge only (faster, but less current).
 - `WEB_SEARCH_MAX_USES = 5` — caps how many searches the model may run per plan.
-- `ENABLE_WEATHER = true` — set to `false` to skip weather fetching (and location
-  geocoding); the map then has no coordinates and won't appear.
+- `ENABLE_WEATHER = true` — set to `false` to skip weather fetching (and the location
+  geocoding used for the map's city fallback).
+- `ENABLE_ACTIVITY_PINS = true` — set to `false` to skip per-activity geocoding; the map
+  then falls back to city-level pins.
 
 ## Keeping your key safe
 
@@ -189,6 +194,6 @@ This is a working prototype.
 - Suggestions are grounded but not guaranteed — the model can still occasionally get a
   detail wrong.
 - Weather beyond ~16 days is **typical** (based on last year's actuals), not a forecast.
-- The map shows **city-level** pins, not individual venues.
-- On narrow/mobile screens the input rail stacks above the results rather than collapsing.
+- Map pins are best-effort — an activity whose venue can't be geocoded gets no pin, and a
+  match can occasionally be slightly off.
 - There are no automated tests yet, and it isn't deployed (it runs locally).
