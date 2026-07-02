@@ -4,7 +4,9 @@ import {
   MAX_TOKENS,
   ENABLE_WEB_SEARCH,
   WEB_SEARCH_MAX_USES,
+  ENABLE_WEATHER,
 } from "./config.js";
+import { enrichPlanWithWeather } from "./weather.js";
 
 // The SDK reads ANTHROPIC_API_KEY from the environment (loaded from .env in
 // index.js before this module is imported). The key stays server-side.
@@ -353,5 +355,16 @@ export async function generatePlan(input) {
   const textBlock = response.content.find((b) => b.type === "text");
   if (!textBlock) throw new Error("The model returned no plan text.");
 
-  return JSON.parse(textBlock.text);
+  const plan = JSON.parse(textBlock.text);
+
+  // Attach real weather + location coordinates from Open-Meteo (best-effort).
+  if (ENABLE_WEATHER) {
+    try {
+      await enrichPlanWithWeather(plan);
+    } catch (err) {
+      console.warn("[trip-planner] weather enrichment failed:", err.message);
+    }
+  }
+
+  return plan;
 }

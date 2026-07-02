@@ -189,11 +189,13 @@ let activeCityIndex = 0;
 let itineraryView = "calendar"; // "calendar" | "list"
 let selectedDayIndex = 0;
 let itineraryDays = [];
+let planWeather = {}; // { "YYYY-MM-DD": {mode, tmax, tmin, icon, label} }
 
 function renderPlan(plan) {
   activeMenuIndex = 0;
   activeCityIndex = 0;
   selectedDayIndex = 0;
+  planWeather = plan.weather || {};
   renderSummary(plan.trip_summary);
   renderMenus(plan.idea_menus);
   renderItinerary(plan.itinerary);
@@ -211,6 +213,22 @@ function formatDateLong(iso) {
     month: "short",
     day: "numeric",
   });
+}
+
+// Compact weather for a calendar cell (icon + high temp), or "" if none.
+function weatherChip(dateIso) {
+  const w = planWeather[dateIso];
+  return w ? `<span class="cal-wx">${w.icon} ${w.tmax}°</span>` : "";
+}
+
+// Fuller weather line for a day's detail — high/low plus an honest label of
+// whether it's a real forecast or a typical value for the dates.
+function weatherLine(dateIso) {
+  const w = planWeather[dateIso];
+  if (!w) return "";
+  const mode = w.mode === "forecast" ? "Forecast" : "Typical for the dates";
+  const label = w.label ? escapeHtml(w.label) + " · " : "";
+  return `<div class="wx-line">${w.icon} ${label}${w.tmax}° / ${w.tmin}°<span class="wx-mode">${mode}</span></div>`;
 }
 
 function renderSummary(summary) {
@@ -338,6 +356,7 @@ function dayDetailHtml(day) {
       <span class="day-date">${escapeHtml(formatDateLong(day.date))}</span>
       <span class="day-loc">${escapeHtml(day.location)}</span>
     </div>
+    ${weatherLine(day.date)}
     <p class="day-summary">${escapeHtml(day.day_summary)}</p>
     ${(day.fixed_commitments || [])
       .map(
@@ -419,7 +438,7 @@ function renderItineraryCalendar(container) {
           <span class="cal-daynum">${parseDate(day.date).getDate()}</span>
           <span class="cal-loc">${escapeHtml(day.location)}</span>
           ${hasCommit ? '<span class="cal-dot" title="Has a fixed commitment"></span>' : ""}
-          <!-- weather slot reserved for Phase 4 -->
+          ${weatherChip(day.date)}
         </button>`;
     })
     .join("");

@@ -565,6 +565,32 @@ button:focus-visible {
   background: var(--brand);
 }
 
+.cal-wx {
+  margin-top: auto; /* sink to the bottom of the cell */
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+/* Weather line in a day's detail panel */
+.wx-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  font-size: 0.92rem;
+  margin: 0 0 0.5rem;
+}
+
+.wx-mode {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  padding: 0.05rem 0.45rem;
+}
+
 .cal-detail {
   min-height: 120px;
 }

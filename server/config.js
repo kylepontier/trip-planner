@@ -20,3 +20,8 @@ export const ENABLE_WEB_SEARCH = true;
 // Caps how many searches the model may run during the research pass — keeps
 // latency and cost bounded. 5 is comfortable for a multi-city trip.
 export const WEB_SEARCH_MAX_USES = 5;
+
+// ── Weather (Layer 4) ──────────────────────────────────────────────────
+// When true, the server fetches real weather from Open-Meteo (free, no key)
+// for each location — a forecast when dates are near, typical values when far.
+export const ENABLE_WEATHER = true;
