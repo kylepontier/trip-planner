@@ -10,3 +10,13 @@ export const MODEL = "claude-sonnet-4-6";
 // default that comfortably fits menus + a two-week itinerary while
 // staying under the SDK's request timeout.
 export const MAX_TOKENS = 16000;
+
+// ── Web-search grounding (Layer 2) ─────────────────────────────────────
+// When true, the planner first runs a web-search pass to confirm real,
+// current places and timely events before writing the plan. Flip to false
+// to fall back to Layer 1 behavior (model knowledge only).
+export const ENABLE_WEB_SEARCH = true;
+
+// Caps how many searches the model may run during the research pass — keeps
+// latency and cost bounded. 5 is comfortable for a multi-city trip.
+export const WEB_SEARCH_MAX_USES = 5;
