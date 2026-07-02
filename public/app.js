@@ -206,9 +206,9 @@ let itineraryView = "calendar"; // "calendar" | "list"
 let selectedDayIndex = 0;
 let itineraryDays = [];
 let planWeather = {}; // { "YYYY-MM-DD": {mode, tmax, tmin, icon, label} }
-let planLocations = []; // [{name, lat, lng}] — only those that geocoded
+let planLocations = []; // [{name, lat, lng}] cities — used as a map fallback
 let tripMap = null; // Leaflet map instance (recreated per calendar render)
-let cityMarkers = {}; // city name -> Leaflet marker
+let dayLayer = null; // Leaflet layer group holding the current day's markers
 
 function renderPlan(plan) {
   activeMenuIndex = 0;
@@ -253,28 +253,54 @@ function weatherLine(dateIso) {
   return `<div class="wx-line">${w.icon} ${label}${w.tmax}° / ${w.tmin}°<span class="wx-mode">${mode}</span></div>`;
 }
 
-// ── Itinerary map (Leaflet, city-level pins) ─────────────────────────────
+// ── Itinerary map (Leaflet, per-activity pins) ───────────────────────────
 function destroyMap() {
   if (tripMap) {
     tripMap.remove();
     tripMap = null;
-    cityMarkers = {};
+    dayLayer = null;
   }
 }
 
-// Pan the map to the currently selected day's city and open its popup.
-function focusMapOnSelectedDay() {
-  if (!tripMap) return;
-  const day = itineraryDays[selectedDayIndex];
-  const marker = day && cityMarkers[day.location];
-  if (marker) {
-    tripMap.setView(marker.getLatLng(), 11, { animate: true });
-    marker.openPopup();
+function cityCoords(name) {
+  return planLocations.find((l) => l.name === name) || null;
+}
+
+// Show the selected day's activity pins, fitting the map to them. If none of
+// that day's activities could be located, fall back to the city.
+function showDayOnMap(dayIndex) {
+  if (!tripMap || !dayLayer) return;
+  dayLayer.clearLayers();
+  const day = itineraryDays[dayIndex];
+  if (!day) return;
+
+  const pts = [];
+  for (const slot of day.slots || []) {
+    if (typeof slot.lat === "number" && typeof slot.lng === "number") {
+      L.marker([slot.lat, slot.lng])
+        .addTo(dayLayer)
+        .bindPopup(escapeHtml(slot.activity_title));
+      pts.push([slot.lat, slot.lng]);
+    }
+  }
+
+  if (pts.length > 1) {
+    tripMap.fitBounds(pts, { padding: [30, 30], maxZoom: 15 });
+  } else if (pts.length === 1) {
+    tripMap.setView(pts[0], 14, { animate: true });
+  } else {
+    const c = cityCoords(day.location);
+    if (c) {
+      L.marker([c.lat, c.lng])
+        .addTo(dayLayer)
+        .bindPopup(escapeHtml(day.location));
+      tripMap.setView([c.lat, c.lng], 11, { animate: true });
+    }
   }
 }
 
-// Build the map for the plan's locations. No-op if Leaflet didn't load or
-// there are no coordinates (so a CDN/geocoding failure degrades gracefully).
+// Build the map. No-op if Leaflet didn't load or there are no coordinates (so a
+// CDN/geocoding failure degrades gracefully to no map).
 function buildTripMap(mapEl) {
   if (!mapEl || !window.L || !planLocations.length) return;
   destroyMap();
@@ -283,20 +309,15 @@ function buildTripMap(mapEl) {
     attribution: "&copy; OpenStreetMap contributors",
     maxZoom: 19,
   }).addTo(tripMap);
+  dayLayer = L.layerGroup().addTo(tripMap);
 
-  const latlngs = [];
-  for (const loc of planLocations) {
-    cityMarkers[loc.name] = L.marker([loc.lat, loc.lng])
-      .addTo(tripMap)
-      .bindPopup(escapeHtml(loc.name));
-    latlngs.push([loc.lat, loc.lng]);
-  }
-  if (latlngs.length > 1) tripMap.fitBounds(latlngs, { padding: [30, 30] });
-  else tripMap.setView(latlngs[0], 11);
-
-  // The container is sized by CSS after init; recompute once it's laid out.
-  setTimeout(() => tripMap && tripMap.invalidateSize(), 0);
-  focusMapOnSelectedDay();
+  // The container is sized by CSS after init; recompute once laid out, then
+  // show the selected day so bounds are computed against the real size.
+  setTimeout(() => {
+    if (!tripMap) return;
+    tripMap.invalidateSize();
+    showDayOnMap(selectedDayIndex);
+  }, 0);
 }
 
 function renderSummary(summary) {
@@ -536,7 +557,7 @@ function renderItineraryCalendar(container) {
         .forEach((c) => c.classList.remove("selected"));
       btn.classList.add("selected");
       paintDetail();
-      focusMapOnSelectedDay();
+      showDayOnMap(selectedDayIndex);
     });
   });
 

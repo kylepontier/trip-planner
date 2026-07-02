@@ -5,8 +5,10 @@ import {
   ENABLE_WEB_SEARCH,
   WEB_SEARCH_MAX_USES,
   ENABLE_WEATHER,
+  ENABLE_ACTIVITY_PINS,
 } from "./config.js";
 import { enrichPlanWithWeather } from "./weather.js";
+import { enrichPlanWithActivityCoords } from "./geocode.js";
 
 // The SDK reads ANTHROPIC_API_KEY from the environment (loaded from .env in
 // index.js before this module is imported). The key stays server-side.
@@ -147,7 +149,14 @@ const PLAN_SCHEMA = {
             items: {
               type: "object",
               additionalProperties: false,
-              required: ["part_of_day", "activity_title", "why", "good_for_ages", "url"],
+              required: [
+                "part_of_day",
+                "activity_title",
+                "why",
+                "good_for_ages",
+                "url",
+                "place",
+              ],
               properties: {
                 part_of_day: {
                   type: "string",
@@ -158,6 +167,8 @@ const PLAN_SCHEMA = {
                 good_for_ages: { type: "array", items: { type: "integer" } },
                 // Same as ideas: a real link for this activity, or "".
                 url: { type: "string" },
+                // Bare, mappable venue name for geocoding (or "").
+                place: { type: "string" },
               },
             },
           },
@@ -208,6 +219,12 @@ Links:
   (the official website, or a tickets/booking page) ONLY if you are confident it exists
   from your knowledge or the research brief. If you are not sure of a real URL, use an
   empty string "". Never fabricate or guess links.
+
+Map:
+- For each itinerary slot, include a "place": the specific, mappable venue, park, or
+  landmark name ONLY (e.g. "Woodland Park Zoo"), with no descriptive suffixes, exhibit or
+  event names, parentheticals, or extra words. Use "" if the activity isn't tied to one
+  specific place (e.g. "relax at the hotel" or an either/or suggestion).
 
 All dates must be YYYY-MM-DD. good_for_ages is always [minAge, maxAge].`;
 
@@ -363,6 +380,15 @@ export async function generatePlan(input) {
       await enrichPlanWithWeather(plan);
     } catch (err) {
       console.warn("[trip-planner] weather enrichment failed:", err.message);
+    }
+  }
+
+  // Attach per-activity coordinates for the map (best-effort).
+  if (ENABLE_ACTIVITY_PINS) {
+    try {
+      await enrichPlanWithActivityCoords(plan);
+    } catch (err) {
+      console.warn("[trip-planner] activity geocoding failed:", err.message);
     }
   }
 

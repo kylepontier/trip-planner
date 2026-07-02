@@ -25,3 +25,7 @@ export const WEB_SEARCH_MAX_USES = 5;
 // When true, the server fetches real weather from Open-Meteo (free, no key)
 // for each location — a forecast when dates are near, typical values when far.
 export const ENABLE_WEATHER = true;
+
+// When true, the server geocodes each itinerary activity (Photon, free, no key)
+// so the map can show per-activity pins. Adds a little generation latency.
+export const ENABLE_ACTIVITY_PINS = true;
