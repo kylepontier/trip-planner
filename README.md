@@ -7,7 +7,8 @@ flexible, day-by-day itinerary** tailored to your family.
 
 Plain HTML, CSS, and JavaScript — no React, no TypeScript, no build step. A tiny local
 Node server holds your API key and talks to the Claude API so the key never reaches the
-browser.
+browser. The interface uses Microsoft's **Fluent 2** design language, with a light/dark
+theme toggle that defaults to your operating system's setting.
 
 ## How it works
 
@@ -66,6 +67,16 @@ variant on purpose — predictable latency over marginal filtering.
 placed into the itinerary first; the model fills open slots around them. The requirement
 is enforced structurally, not just requested in the prompt.
 
+**Fluent 2 styling in plain CSS.** The UI matches Microsoft's Fluent 2 design language
+through CSS design tokens rather than a component library — no build step and no runtime
+dependency, and it themes everything uniformly, including the native date pickers.
+Light and dark are a token swap driven by a `data-theme` attribute: it defaults to the
+OS setting, follows OS changes until you choose manually, then remembers your choice. An
+inline script in the page head applies the theme before first paint to avoid a flash of
+the wrong colors. (The real Fluent component libraries were considered — Web Components
+v3 and React v9 — but both added either theming/date-picker gaps or a build step, so a
+faithful CSS match was the better fit for this stack.)
+
 ## Setup
 
 You need [Node.js](https://nodejs.org) version 18 or newer (`node --version` to check).
@@ -100,6 +111,9 @@ You need [Node.js](https://nodejs.org) version 18 or newer (`node --version` to 
      energy, and duration badges on each idea.
    - **Day-by-day itinerary** — one card per day, with any fixed commitments pinned first
      and each open slot carrying a one-line rationale.
+
+Use the ☀️/🌙 button in the top-right to switch between light and dark themes. It follows
+your operating system by default and remembers a manual choice.
 
 ## Changing the model
 

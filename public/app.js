@@ -1,3 +1,32 @@
+// ── Light / dark theme ──────────────────────────────────────────────────
+// The initial theme is set by the inline script in <head> (from saved choice
+// or OS preference). Here we handle the toggle button and keep following the
+// OS until the user makes an explicit choice.
+const themeToggle = document.getElementById("theme-toggle");
+const osDark = window.matchMedia("(prefers-color-scheme: dark)");
+
+function currentTheme() {
+  return document.documentElement.getAttribute("data-theme") || "light";
+}
+function paintToggle() {
+  // Show the icon of the theme you'd switch TO.
+  themeToggle.textContent = currentTheme() === "dark" ? "☀️" : "🌙";
+}
+function setTheme(theme, remember) {
+  document.documentElement.setAttribute("data-theme", theme);
+  if (remember) localStorage.setItem("theme", theme);
+  paintToggle();
+}
+
+paintToggle();
+themeToggle.addEventListener("click", () => {
+  setTheme(currentTheme() === "dark" ? "light" : "dark", true);
+});
+// If the user hasn't chosen manually, keep mirroring the OS setting live.
+osDark.addEventListener("change", (e) => {
+  if (!localStorage.getItem("theme")) setTheme(e.matches ? "dark" : "light", false);
+});
+
 // ── Dynamic form rows ───────────────────────────────────────────────────
 // Each "Add" button appends a small row template; each row has its own remove
 // button. The number of kids/locations/commitments is simply the row count.

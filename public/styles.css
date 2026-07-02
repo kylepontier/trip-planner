@@ -1,12 +1,76 @@
+/* ── Fluent 2 design tokens ──────────────────────────────────────────────
+   A faithful Fluent 2 look using CSS custom properties. Light values live on
+   :root; dark values override them under [data-theme="dark"]. `color-scheme`
+   makes native controls (including the date/time pickers) match the theme. */
 :root {
-  --bg: #f4f6f9;
-  --card: #ffffff;
-  --ink: #1f2733;
-  --muted: #6b7683;
-  --line: #e2e7ee;
-  --accent: #2f6f6a;
-  --accent-soft: #e5f0ef;
-  --shadow: 0 1px 3px rgba(20, 30, 45, 0.08), 0 6px 20px rgba(20, 30, 45, 0.05);
+  color-scheme: light;
+
+  /* Brand (Fluent communication blue) */
+  --brand: #0f6cbd;
+  --brand-hover: #115ea3;
+  --brand-pressed: #0c3b5e;
+  --brand-fg: #0f6cbd; /* links / accents */
+  --brand-tint: #ebf3fc; /* subtle brand fill */
+
+  /* Neutrals */
+  --canvas: #f5f5f5; /* page background */
+  --card: #ffffff; /* surfaces */
+  --ink: #242424; /* primary text */
+  --muted: #616161; /* secondary text */
+  --line: #d1d1d1; /* strokes */
+  --line-2: #e0e0e0;
+  --field: #ffffff; /* input background */
+
+  /* Depth (Fluent shadow ramp) */
+  --shadow-2: 0 1px 2px rgba(0, 0, 0, 0.14), 0 0 2px rgba(0, 0, 0, 0.12);
+  --shadow-4: 0 2px 4px rgba(0, 0, 0, 0.14), 0 0 2px rgba(0, 0, 0, 0.12);
+  --shadow-8: 0 4px 8px rgba(0, 0, 0, 0.14), 0 0 2px rgba(0, 0, 0, 0.12);
+
+  /* Corner radius */
+  --radius-s: 4px;
+  --radius-m: 6px;
+  --radius-l: 8px;
+
+  /* Status */
+  --warn-bg: #fff4ce;
+  --warn-border: #f2e2b3;
+  --warn-ink: #6b5a17;
+  --error-bg: #fdf3f4;
+  --error-ink: #b10e1c;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --brand: #0f6cbd;
+  --brand-hover: #2886de;
+  --brand-pressed: #479ef5;
+  --brand-fg: #479ef5; /* brighter for contrast on dark */
+  --brand-tint: #12283a;
+
+  --canvas: #141414;
+  --card: #1f1f1f;
+  --ink: #ffffff;
+  --muted: #adadad;
+  --line: #3d3d3d;
+  --line-2: #333333;
+  --field: #292929;
+
+  --shadow-2: 0 1px 2px rgba(0, 0, 0, 0.28), 0 0 2px rgba(0, 0, 0, 0.24);
+  --shadow-4: 0 2px 4px rgba(0, 0, 0, 0.28), 0 0 2px rgba(0, 0, 0, 0.24);
+  --shadow-8: 0 4px 8px rgba(0, 0, 0, 0.4), 0 0 2px rgba(0, 0, 0, 0.3);
+
+  --warn-bg: #3a2e00;
+  --warn-border: #5c4a00;
+  --warn-ink: #fce7a1;
+  --error-bg: #3a1418;
+  --error-ink: #ff99a4;
+}
+
+/* Convenience aliases used throughout */
+:root {
+  --accent: var(--brand-fg);
+  --accent-soft: var(--brand-tint);
 }
 
 * {
@@ -15,27 +79,58 @@
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
-    Arial, sans-serif;
+  font-family: "Segoe UI Variable", "Segoe UI", -apple-system,
+    BlinkMacSystemFont, system-ui, "Helvetica Neue", Arial, sans-serif;
   color: var(--ink);
-  background: var(--bg);
+  background: var(--canvas);
   line-height: 1.5;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
+/* ── Header ──────────────────────────────────────────────── */
 header {
   max-width: 900px;
   margin: 0 auto;
   padding: 2rem 1.25rem 0.5rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
 }
 
 h1 {
   margin: 0;
   font-size: 1.9rem;
+  font-weight: 600;
 }
 
 .tagline {
   color: var(--muted);
   margin: 0.35rem 0 0;
+}
+
+.theme-toggle {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  font-size: 1.1rem;
+  line-height: 1;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  background: var(--card);
+  color: var(--ink);
+  cursor: pointer;
+  box-shadow: var(--shadow-2);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.theme-toggle:hover {
+  border-color: var(--brand);
+}
+
+.theme-toggle:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
 }
 
 main {
@@ -44,18 +139,20 @@ main {
   padding: 1.25rem;
 }
 
+/* ── Cards ───────────────────────────────────────────────── */
 .card {
   background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 12px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-l);
   padding: 1.1rem 1.25rem;
   margin-bottom: 1rem;
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-2);
 }
 
 .card h2 {
   margin: 0 0 0.25rem;
   font-size: 1.15rem;
+  font-weight: 600;
 }
 
 .hint {
@@ -70,6 +167,7 @@ main {
   font-size: 0.85rem;
 }
 
+/* ── Form fields (Fluent-style inputs) ───────────────────── */
 label {
   display: block;
   font-size: 0.85rem;
@@ -82,14 +180,21 @@ input {
   color: var(--ink);
   padding: 0.5rem 0.6rem;
   border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #fff;
+  border-bottom-width: 2px;
+  border-radius: var(--radius-s);
+  background: var(--field);
   width: 100%;
+  transition: border-color 0.15s ease;
+}
+
+input:hover {
+  border-color: var(--muted);
 }
 
 input:focus {
-  outline: 2px solid var(--accent-soft);
-  border-color: var(--accent);
+  outline: none;
+  border-color: var(--brand);
+  border-bottom-color: var(--brand);
 }
 
 .row {
@@ -104,80 +209,99 @@ input:focus {
   flex: 1 1 140px;
 }
 
+/* ── Buttons ─────────────────────────────────────────────── */
 .remove-btn {
   border: 1px solid var(--line);
-  background: #fff;
+  background: var(--card);
   color: var(--muted);
-  border-radius: 8px;
+  border-radius: var(--radius-s);
   padding: 0.5rem 0.7rem;
   cursor: pointer;
   height: fit-content;
+  font: inherit;
+  transition: border-color 0.15s ease, color 0.15s ease;
 }
 
 .remove-btn:hover {
-  border-color: #d98b8b;
-  color: #b64a4a;
+  border-color: var(--error-ink);
+  color: var(--error-ink);
 }
 
 .add-btn {
   border: 1px dashed var(--line);
-  background: #fff;
-  color: var(--accent);
-  border-radius: 8px;
+  background: transparent;
+  color: var(--brand-fg);
+  border-radius: var(--radius-s);
   padding: 0.5rem 0.8rem;
   cursor: pointer;
   font: inherit;
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .add-btn:hover {
-  border-color: var(--accent);
+  border-color: var(--brand);
   background: var(--accent-soft);
 }
 
 .primary-btn {
   font: inherit;
   font-weight: 600;
-  color: #fff;
-  background: var(--accent);
+  color: #ffffff;
+  background: var(--brand);
   border: none;
-  border-radius: 10px;
+  border-radius: var(--radius-s);
   padding: 0.8rem 1.4rem;
   cursor: pointer;
   width: 100%;
+  box-shadow: var(--shadow-2);
+  transition: background 0.15s ease;
 }
 
 .primary-btn:hover {
-  background: #275b57;
+  background: var(--brand-hover);
+}
+
+.primary-btn:active {
+  background: var(--brand-pressed);
 }
 
 .primary-btn:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: default;
 }
 
+button:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+/* ── Status ──────────────────────────────────────────────── */
 .status {
   margin: 1rem 0;
   padding: 0.9rem 1.1rem;
-  border-radius: 10px;
+  border-radius: var(--radius-m);
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--brand-fg);
+  border: 1px solid var(--line-2);
   font-weight: 500;
 }
 
 .status.error {
-  background: #fbeaea;
-  color: #b64a4a;
+  background: var(--error-bg);
+  color: var(--error-ink);
+  border-color: var(--error-ink);
 }
 
 .results-heading {
   margin: 1.75rem 0 0.75rem;
+  font-weight: 600;
 }
 
 .summary p {
   margin: 0.25rem 0;
 }
 
-/* ── Idea menus ─────────────────────────────────────────── */
+/* ── Idea menus ──────────────────────────────────────────── */
 .menu-card {
   margin-bottom: 1rem;
 }
@@ -185,10 +309,11 @@ input:focus {
 .menu-card h3 {
   margin: 0 0 0.6rem;
   font-size: 1.05rem;
+  font-weight: 600;
 }
 
 .idea {
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--line-2);
   padding: 0.65rem 0;
 }
 
@@ -217,16 +342,17 @@ input:focus {
   padding: 0.15rem 0.5rem;
   border-radius: 999px;
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--brand-fg);
   white-space: nowrap;
 }
 
 .badge.muted {
-  background: #eef1f5;
+  background: var(--field);
   color: var(--muted);
+  border: 1px solid var(--line-2);
 }
 
-/* ── Itinerary ──────────────────────────────────────────── */
+/* ── Itinerary ───────────────────────────────────────────── */
 .day-card {
   margin-bottom: 1rem;
 }
@@ -245,7 +371,7 @@ input:focus {
 }
 
 .day-loc {
-  color: var(--accent);
+  color: var(--brand-fg);
   font-size: 0.85rem;
   background: var(--accent-soft);
   padding: 0.1rem 0.55rem;
@@ -259,16 +385,17 @@ input:focus {
 }
 
 .commitments {
-  background: #fff6e9;
-  border: 1px solid #f2e0c2;
-  border-radius: 8px;
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-border);
+  border-radius: var(--radius-s);
   padding: 0.5rem 0.7rem;
   margin-bottom: 0.6rem;
   font-size: 0.9rem;
+  color: var(--warn-ink);
 }
 
 .commitments strong {
-  color: #9a6a1e;
+  color: var(--warn-ink);
 }
 
 .slot {
@@ -276,7 +403,7 @@ input:focus {
   grid-template-columns: 90px 1fr;
   gap: 0.6rem;
   padding: 0.45rem 0;
-  border-top: 1px dashed var(--line);
+  border-top: 1px dashed var(--line-2);
 }
 
 .slot:first-of-type {
@@ -285,7 +412,7 @@ input:focus {
 
 .slot-part {
   text-transform: capitalize;
-  color: var(--accent);
+  color: var(--brand-fg);
   font-weight: 600;
   font-size: 0.85rem;
 }
