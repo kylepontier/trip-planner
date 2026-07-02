@@ -95,6 +95,7 @@ const PLAN_SCHEMA = {
                 "energy_level",
                 "weather_dependent",
                 "duration_hours",
+                "url",
               ],
               properties: {
                 title: { type: "string" },
@@ -108,6 +109,8 @@ const PLAN_SCHEMA = {
                 },
                 weather_dependent: { type: "boolean" },
                 duration_hours: { type: "number" },
+                // A real, useful link (official site / booking) or "" if unsure.
+                url: { type: "string" },
               },
             },
           },
@@ -142,7 +145,7 @@ const PLAN_SCHEMA = {
             items: {
               type: "object",
               additionalProperties: false,
-              required: ["part_of_day", "activity_title", "why", "good_for_ages"],
+              required: ["part_of_day", "activity_title", "why", "good_for_ages", "url"],
               properties: {
                 part_of_day: {
                   type: "string",
@@ -151,6 +154,8 @@ const PLAN_SCHEMA = {
                 activity_title: { type: "string" },
                 why: { type: "string" }, // one line on why it fits here
                 good_for_ages: { type: "array", items: { type: "integer" } },
+                // Same as ideas: a real link for this activity, or "".
+                url: { type: "string" },
               },
             },
           },
@@ -196,6 +201,12 @@ Itinerary:
 - Every slot's "why" should briefly justify the placement (energy, weather, timing,
   age balance, proximity to a commitment, etc.).
 
+Links:
+- For every idea and every itinerary slot, include a "url": a single real, useful link
+  (the official website, or a tickets/booking page) ONLY if you are confident it exists
+  from your knowledge or the research brief. If you are not sure of a real URL, use an
+  empty string "". Never fabricate or guess links.
+
 All dates must be YYYY-MM-DD. good_for_ages is always [minAge, maxAge].`;
 
 // A plain-text description of the trip parameters, reused by both phases.
@@ -224,7 +235,8 @@ function buildSearchPrompt(input) {
     "",
     "For each location, list:",
     "- A handful of specific, currently-open attractions or activities suited to the",
-    "  kids' ages (name — one-line note: what it is, rough age fit, indoor/outdoor).",
+    "  kids' ages (name — one-line note: what it is, rough age fit, indoor/outdoor;",
+    "  include the official website URL if you find one).",
     "- Any notable events, festivals, or seasonal considerations during the dates.",
     "- A one-line weather expectation for the season.",
     "",

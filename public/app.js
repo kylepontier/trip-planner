@@ -170,6 +170,13 @@ function escapeHtml(str) {
   );
 }
 
+// Only allow http(s) links through — guards against javascript: etc. in a URL
+// the model might produce. Returns "" for anything not a plain web URL.
+function safeUrl(url) {
+  const u = String(url || "").trim();
+  return /^https?:\/\//i.test(u) ? u : "";
+}
+
 function ageBand(range) {
   if (!Array.isArray(range) || range.length < 2) return "all ages";
   return `ages ${range[0]}–${range[1]}`;
@@ -237,6 +244,7 @@ function renderSummary(summary) {
 // One idea card. `showLocation` is false when the city is already conveyed by
 // a selected city sub-tab (so the location badge would just be redundant).
 function ideaHtml(idea, showLocation = true) {
+  const link = safeUrl(idea.url);
   return `
     <div class="idea">
       <div class="idea-title">${escapeHtml(idea.title)}</div>
@@ -248,6 +256,7 @@ function ideaHtml(idea, showLocation = true) {
         <span class="badge muted">~${idea.duration_hours}h</span>
         ${idea.weather_dependent ? '<span class="badge muted">weather-dependent</span>' : ""}
       </div>
+      ${link ? `<a class="ext-link" href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">More info ↗</a>` : ""}
     </div>`;
 }
 
@@ -346,6 +355,7 @@ function dayDetailHtml(day) {
         <div>
           <div class="slot-activity">${escapeHtml(slot.activity_title)}</div>
           <div class="slot-why">${escapeHtml(slot.why)} · <em>${ageBand(slot.good_for_ages)}</em></div>
+          ${safeUrl(slot.url) ? `<a class="ext-link" href="${escapeHtml(safeUrl(slot.url))}" target="_blank" rel="noopener noreferrer">More info ↗</a>` : ""}
         </div>
       </div>`,
       )
