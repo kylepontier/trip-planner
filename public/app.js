@@ -171,85 +171,225 @@ function ageBand(range) {
   return `ages ${range[0]}–${range[1]}`;
 }
 
+// View state for the results. Persists across tab/toggle clicks within a plan;
+// reset when a new plan is rendered.
+let activeMenuIndex = 0;
+let itineraryView = "calendar"; // "calendar" | "list"
+let selectedDayIndex = 0;
+let itineraryDays = [];
+
 function renderPlan(plan) {
+  activeMenuIndex = 0;
+  selectedDayIndex = 0;
   renderSummary(plan.trip_summary);
   renderMenus(plan.idea_menus);
   renderItinerary(plan.itinerary);
 }
 
+// Parse a "YYYY-MM-DD" string as a LOCAL date (avoids the UTC shift that
+// `new Date("2026-07-02")` would introduce, which can bump the weekday).
+function parseDate(iso) {
+  const [y, m, d] = String(iso || "").split("-").map(Number);
+  return new Date(y || 1970, (m || 1) - 1, d || 1);
+}
+function formatDateLong(iso) {
+  return parseDate(iso).toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
 function renderSummary(summary) {
   const el = document.getElementById("summary");
-  const ages = (summary.kids || []).map((k) => k.age).join(", ");
-  const locs = (summary.locations || [])
-    .map((l) => `${escapeHtml(l.name)} (${l.start} → ${l.end})`)
-    .join(", ");
+  const ages = (summary.kids || []).map((k) => k.age);
+  const kidsLabel = ages.length
+    ? `${ages.length} ${ages.length === 1 ? "kid" : "kids"} · ages ${ages.join(", ")}`
+    : "—";
+  const locs =
+    (summary.locations || []).map((l) => escapeHtml(l.name)).join("  →  ") || "—";
+
   el.innerHTML = `
-    <p><strong>Kids:</strong> ${escapeHtml(ages) || "—"}</p>
-    <p><strong>Dates:</strong> ${summary.date_range?.start} → ${summary.date_range?.end}</p>
-    <p><strong>Locations:</strong> ${locs || "—"}</p>
-    <p><strong>Season notes:</strong> ${escapeHtml(summary.season_notes)}</p>`;
+    <div class="hero-eyebrow">Your trip plan</div>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <span class="hero-stat-label">Travelers</span>
+        <span class="hero-stat-value">${kidsLabel}</span>
+      </div>
+      <div class="hero-stat">
+        <span class="hero-stat-label">Dates</span>
+        <span class="hero-stat-value">${summary.date_range?.start} → ${summary.date_range?.end}</span>
+      </div>
+      <div class="hero-stat">
+        <span class="hero-stat-label">Where</span>
+        <span class="hero-stat-value">${locs}</span>
+      </div>
+    </div>
+    <p class="hero-notes">${escapeHtml(summary.season_notes)}</p>`;
+}
+
+// Idea menus render as TABS — one tab per non-empty category — so you switch
+// between them instead of scrolling one long stack.
+function ideaHtml(idea) {
+  return `
+    <div class="idea">
+      <div class="idea-title">${escapeHtml(idea.title)}</div>
+      <p class="idea-desc">${escapeHtml(idea.description)}</p>
+      <div class="badges">
+        <span class="badge">${ageBand(idea.good_for_ages)}</span>
+        <span class="badge muted">${escapeHtml(idea.location)}</span>
+        <span class="badge muted">${escapeHtml(idea.energy_level)} energy</span>
+        <span class="badge muted">~${idea.duration_hours}h</span>
+        ${idea.weather_dependent ? '<span class="badge muted">weather-dependent</span>' : ""}
+      </div>
+    </div>`;
 }
 
 function renderMenus(menus) {
   const el = document.getElementById("menus");
-  el.innerHTML = (menus || [])
+  const list = (menus || []).filter((m) => (m.ideas || []).length);
+  if (!list.length) {
+    el.innerHTML = "";
+    return;
+  }
+  if (activeMenuIndex >= list.length) activeMenuIndex = 0;
+
+  const tabs = list
     .map(
-      (menu) => `
-      <div class="card menu-card">
-        <h3>${escapeHtml(menu.label)}</h3>
-        ${(menu.ideas || [])
-          .map(
-            (idea) => `
-          <div class="idea">
-            <div class="idea-title">${escapeHtml(idea.title)}</div>
-            <p class="idea-desc">${escapeHtml(idea.description)}</p>
-            <div class="badges">
-              <span class="badge">${ageBand(idea.good_for_ages)}</span>
-              <span class="badge muted">${escapeHtml(idea.location)}</span>
-              <span class="badge muted">${escapeHtml(idea.energy_level)} energy</span>
-              <span class="badge muted">~${idea.duration_hours}h</span>
-              ${idea.weather_dependent ? '<span class="badge muted">weather-dependent</span>' : ""}
-            </div>
-          </div>`,
-          )
-          .join("")}
-      </div>`,
+      (m, i) =>
+        `<button type="button" class="tab ${i === activeMenuIndex ? "active" : ""}" data-menu-tab="${i}">${escapeHtml(m.label)}</button>`,
     )
+    .join("");
+  const ideas = (list[activeMenuIndex].ideas || []).map(ideaHtml).join("");
+
+  el.innerHTML = `
+    <div class="tabs" role="tablist">${tabs}</div>
+    <div class="card tab-panel">${ideas}</div>`;
+
+  el.querySelectorAll("[data-menu-tab]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      activeMenuIndex = Number(btn.dataset.menuTab);
+      renderMenus(menus);
+    });
+  });
+}
+
+// The inner content of a single day — shared by the list view and the
+// calendar's detail panel so they never drift apart.
+function dayDetailHtml(day) {
+  return `
+    <div class="day-head">
+      <span class="day-date">${escapeHtml(formatDateLong(day.date))}</span>
+      <span class="day-loc">${escapeHtml(day.location)}</span>
+    </div>
+    <p class="day-summary">${escapeHtml(day.day_summary)}</p>
+    ${(day.fixed_commitments || [])
+      .map(
+        (c) => `
+      <div class="commitments">
+        <strong>Fixed:</strong> ${c.time ? escapeHtml(c.time) + " — " : ""}${escapeHtml(c.title)}
+      </div>`,
+      )
+      .join("")}
+    ${(day.slots || [])
+      .map(
+        (slot) => `
+      <div class="slot">
+        <div class="slot-part">${escapeHtml(slot.part_of_day)}</div>
+        <div>
+          <div class="slot-activity">${escapeHtml(slot.activity_title)}</div>
+          <div class="slot-why">${escapeHtml(slot.why)} · <em>${ageBand(slot.good_for_ages)}</em></div>
+        </div>
+      </div>`,
+      )
+      .join("")}`;
+}
+
+// Itinerary with a Calendar ⇄ List toggle. Calendar is the default.
+function renderItinerary(days) {
+  itineraryDays = days || [];
+  const el = document.getElementById("itinerary");
+  el.innerHTML = `
+    <div class="view-toggle" role="tablist">
+      <button type="button" class="seg ${itineraryView === "calendar" ? "active" : ""}" data-view="calendar">📅 Calendar</button>
+      <button type="button" class="seg ${itineraryView === "list" ? "active" : ""}" data-view="list">☰ List</button>
+    </div>
+    <div id="itinerary-body"></div>`;
+
+  el.querySelectorAll("[data-view]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      itineraryView = btn.dataset.view;
+      renderItinerary(itineraryDays);
+    });
+  });
+
+  const body = el.querySelector("#itinerary-body");
+  if (itineraryView === "list") renderItineraryList(body);
+  else renderItineraryCalendar(body);
+}
+
+function renderItineraryList(container) {
+  container.innerHTML = itineraryDays
+    .map((day) => `<div class="card day-card">${dayDetailHtml(day)}</div>`)
     .join("");
 }
 
-function renderItinerary(days) {
-  const el = document.getElementById("itinerary");
-  el.innerHTML = (days || [])
-    .map(
-      (day) => `
-      <div class="card day-card">
-        <div class="day-head">
-          <span class="day-date">${escapeHtml(day.date)}</span>
-          <span class="day-loc">${escapeHtml(day.location)}</span>
-        </div>
-        <p class="day-summary">${escapeHtml(day.day_summary)}</p>
-        ${(day.fixed_commitments || [])
-          .map(
-            (c) => `
-          <div class="commitments">
-            <strong>Fixed:</strong> ${c.time ? escapeHtml(c.time) + " — " : ""}${escapeHtml(c.title)}
-          </div>`,
-          )
-          .join("")}
-        ${(day.slots || [])
-          .map(
-            (slot) => `
-          <div class="slot">
-            <div class="slot-part">${escapeHtml(slot.part_of_day)}</div>
-            <div>
-              <div class="slot-activity">${escapeHtml(slot.activity_title)}</div>
-              <div class="slot-why">${escapeHtml(slot.why)} · <em>${ageBand(slot.good_for_ages)}</em></div>
-            </div>
-          </div>`,
-          )
-          .join("")}
-      </div>`,
-    )
+// A weekday-aligned grid of day cells + a detail panel. Click a day to see it.
+function renderItineraryCalendar(container) {
+  if (!itineraryDays.length) {
+    container.innerHTML = "";
+    return;
+  }
+  if (selectedDayIndex >= itineraryDays.length) selectedDayIndex = 0;
+
+  const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const headers = weekdays
+    .map((d) => `<div class="cal-weekday">${d}</div>`)
     .join("");
+
+  // Pad the start so day 1 lands under its real weekday column.
+  const lead = parseDate(itineraryDays[0].date).getDay();
+  const blanks = Array.from(
+    { length: lead },
+    () => `<div class="cal-cell blank"></div>`,
+  ).join("");
+
+  const cells = itineraryDays
+    .map((day, i) => {
+      const hasCommit = (day.fixed_commitments || []).length;
+      return `
+        <button type="button" class="cal-cell ${i === selectedDayIndex ? "selected" : ""}" data-day="${i}">
+          <span class="cal-daynum">${parseDate(day.date).getDate()}</span>
+          <span class="cal-loc">${escapeHtml(day.location)}</span>
+          ${hasCommit ? '<span class="cal-dot" title="Has a fixed commitment"></span>' : ""}
+          <!-- weather slot reserved for Phase 4 -->
+        </button>`;
+    })
+    .join("");
+
+  container.innerHTML = `
+    <div class="cal-layout">
+      <div class="cal-grid-wrap">
+        <div class="cal-grid cal-headers">${headers}</div>
+        <div class="cal-grid cal-days">${blanks}${cells}</div>
+      </div>
+      <div class="card cal-detail" id="cal-detail"></div>
+    </div>`;
+
+  const detail = container.querySelector("#cal-detail");
+  const paintDetail = () => {
+    detail.innerHTML = dayDetailHtml(itineraryDays[selectedDayIndex]);
+  };
+  paintDetail();
+
+  container.querySelectorAll("[data-day]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      selectedDayIndex = Number(btn.dataset.day);
+      container
+        .querySelectorAll(".cal-cell")
+        .forEach((c) => c.classList.remove("selected"));
+      btn.classList.add("selected");
+      paintDetail();
+    });
+  });
 }
