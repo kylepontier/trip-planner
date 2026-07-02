@@ -36,7 +36,8 @@
       ></button>
     </header>
 
-    <main>
+    <div class="app" id="app">
+      <aside class="sidebar">
       <form id="trip-form">
         <!-- Kids -->
         <section class="card">
@@ -86,19 +87,21 @@
           Generate plan
         </button>
       </form>
-
-      <!-- Status + results -->
       <div id="status" class="status" hidden></div>
+      </aside>
+
+      <main class="stage">
       <section id="results" hidden>
         <div id="summary" class="hero"></div>
 
-        <h2 class="results-heading">💡 Activity idea menus</h2>
+        <h2 class="results-heading">💡 Activity Ideas</h2>
         <div id="menus"></div>
 
         <h2 class="results-heading">🗓️ Day-by-day itinerary</h2>
         <div id="itinerary"></div>
       </section>
-    </main>
+      </main>
+    </div>
 
     <script src="app.js"></script>
   </body>

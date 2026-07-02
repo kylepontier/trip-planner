@@ -89,7 +89,7 @@ body {
 
 /* ── Header ──────────────────────────────────────────────── */
 header {
-  max-width: 900px;
+  max-width: 720px;
   margin: 0 auto;
   padding: 2rem 1.25rem 0.5rem;
   display: flex;
@@ -133,10 +133,40 @@ h1 {
   outline-offset: 2px;
 }
 
-main {
-  max-width: 900px;
+/* ── App shell ───────────────────────────────────────────────
+   Before a plan exists: a single centered column (the "start here" form).
+   After generating (body.has-plan): a left input rail + a full main stage. */
+.app {
+  max-width: 720px;
   margin: 0 auto;
   padding: 1.25rem;
+}
+
+.stage {
+  display: none;
+}
+
+body.has-plan header,
+body.has-plan .app {
+  max-width: 1200px;
+}
+
+body.has-plan .app {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+body.has-plan .stage {
+  display: block;
+}
+
+/* Narrow screens: the rail stacks above the stage instead of beside it. */
+@media (max-width: 880px) {
+  body.has-plan .app {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ── Cards ───────────────────────────────────────────────── */
@@ -292,13 +322,6 @@ button:focus-visible {
   border-color: var(--error-ink);
 }
 
-/* Clear separation between the form/button and the generated results. */
-#results {
-  margin-top: 2.5rem;
-  padding-top: 2rem;
-  border-top: 1px solid var(--line-2);
-}
-
 .results-heading {
   margin: 1.75rem 0 0.75rem;
   font-weight: 600;
@@ -386,6 +409,43 @@ button:focus-visible {
 }
 
 .tab:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+/* Secondary (city) sub-tabs — lighter underline style, subordinate to .tab */
+.subtabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem;
+  margin: -0.35rem 0 0.85rem;
+  border-bottom: 1px solid var(--line-2);
+}
+
+.subtab {
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 0.35rem 0.7rem;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.subtab:hover {
+  color: var(--ink);
+}
+
+.subtab.active {
+  color: var(--brand-fg);
+  border-bottom-color: var(--brand);
+  font-weight: 600;
+}
+
+.subtab:focus-visible {
   outline: 2px solid var(--brand);
   outline-offset: 2px;
 }

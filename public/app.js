@@ -141,6 +141,10 @@ form.addEventListener("submit", async (e) => {
     renderPlan(data);
     statusEl.hidden = true;
     resultsEl.hidden = false;
+    // Slide from the centered "start here" form into the dashboard layout:
+    // the inputs become a left rail and the results get the main stage.
+    document.body.classList.add("has-plan");
+    generateBtn.textContent = "Regenerate plan";
     resultsEl.scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (err) {
     setStatus(err.message, true);
@@ -174,12 +178,14 @@ function ageBand(range) {
 // View state for the results. Persists across tab/toggle clicks within a plan;
 // reset when a new plan is rendered.
 let activeMenuIndex = 0;
+let activeCityIndex = 0;
 let itineraryView = "calendar"; // "calendar" | "list"
 let selectedDayIndex = 0;
 let itineraryDays = [];
 
 function renderPlan(plan) {
   activeMenuIndex = 0;
+  activeCityIndex = 0;
   selectedDayIndex = 0;
   renderSummary(plan.trip_summary);
   renderMenus(plan.idea_menus);
@@ -228,16 +234,16 @@ function renderSummary(summary) {
     <p class="hero-notes">${escapeHtml(summary.season_notes)}</p>`;
 }
 
-// Idea menus render as TABS — one tab per non-empty category — so you switch
-// between them instead of scrolling one long stack.
-function ideaHtml(idea) {
+// One idea card. `showLocation` is false when the city is already conveyed by
+// a selected city sub-tab (so the location badge would just be redundant).
+function ideaHtml(idea, showLocation = true) {
   return `
     <div class="idea">
       <div class="idea-title">${escapeHtml(idea.title)}</div>
       <p class="idea-desc">${escapeHtml(idea.description)}</p>
       <div class="badges">
         <span class="badge">${ageBand(idea.good_for_ages)}</span>
-        <span class="badge muted">${escapeHtml(idea.location)}</span>
+        ${showLocation ? `<span class="badge muted">${escapeHtml(idea.location)}</span>` : ""}
         <span class="badge muted">${escapeHtml(idea.energy_level)} energy</span>
         <span class="badge muted">~${idea.duration_hours}h</span>
         ${idea.weather_dependent ? '<span class="badge muted">weather-dependent</span>' : ""}
@@ -245,6 +251,23 @@ function ideaHtml(idea) {
     </div>`;
 }
 
+// Group a category's ideas by city (location), preserving first-seen order.
+function groupByCity(ideas) {
+  const cities = [];
+  const byCity = new Map();
+  for (const idea of ideas || []) {
+    const c = idea.location || "Other";
+    if (!byCity.has(c)) {
+      byCity.set(c, []);
+      cities.push(c);
+    }
+    byCity.get(c).push(idea);
+  }
+  return { cities, byCity };
+}
+
+// Idea menus: PRIMARY tabs pick the activity type; if that type spans more than
+// one city, SECONDARY city tabs de-bundle it so you see one city at a time.
 function renderMenus(menus) {
   const el = document.getElementById("menus");
   const list = (menus || []).filter((m) => (m.ideas || []).length);
@@ -254,21 +277,45 @@ function renderMenus(menus) {
   }
   if (activeMenuIndex >= list.length) activeMenuIndex = 0;
 
-  const tabs = list
+  const category = list[activeMenuIndex];
+  const { cities, byCity } = groupByCity(category.ideas);
+  if (activeCityIndex >= cities.length) activeCityIndex = 0;
+  const multiCity = cities.length > 1;
+
+  const catTabs = list
     .map(
       (m, i) =>
         `<button type="button" class="tab ${i === activeMenuIndex ? "active" : ""}" data-menu-tab="${i}">${escapeHtml(m.label)}</button>`,
     )
     .join("");
-  const ideas = (list[activeMenuIndex].ideas || []).map(ideaHtml).join("");
+
+  const cityTabs = multiCity
+    ? `<div class="subtabs" role="tablist">${cities
+        .map(
+          (c, i) =>
+            `<button type="button" class="subtab ${i === activeCityIndex ? "active" : ""}" data-city-tab="${i}">${escapeHtml(c)}</button>`,
+        )
+        .join("")}</div>`
+    : "";
+
+  const shown = multiCity ? byCity.get(cities[activeCityIndex]) : category.ideas;
+  const ideas = shown.map((idea) => ideaHtml(idea, !multiCity)).join("");
 
   el.innerHTML = `
-    <div class="tabs" role="tablist">${tabs}</div>
+    <div class="tabs" role="tablist">${catTabs}</div>
+    ${cityTabs}
     <div class="card tab-panel">${ideas}</div>`;
 
   el.querySelectorAll("[data-menu-tab]").forEach((btn) => {
     btn.addEventListener("click", () => {
       activeMenuIndex = Number(btn.dataset.menuTab);
+      activeCityIndex = 0; // reset city when the activity type changes
+      renderMenus(menus);
+    });
+  });
+  el.querySelectorAll("[data-city-tab]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      activeCityIndex = Number(btn.dataset.cityTab);
       renderMenus(menus);
     });
   });
