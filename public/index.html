@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Trip Planner</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>🧳 Trip Planner</h1>
+      <p class="tagline">
+        Enter your family's trip details to get categorized activity ideas and a
+        flexible day-by-day itinerary.
+      </p>
+    </header>
+
+    <main>
+      <form id="trip-form">
+        <!-- Kids -->
+        <section class="card">
+          <h2>Kids</h2>
+          <p class="hint">Add each child's age — ages drive age-appropriate ideas.</p>
+          <div id="kids-list"></div>
+          <button type="button" class="add-btn" data-add="kid">+ Add kid</button>
+        </section>
+
+        <!-- Trip dates -->
+        <section class="card">
+          <h2>Trip dates</h2>
+          <p class="hint">Used to consider season, weather, and timing.</p>
+          <div class="row">
+            <label>Start <input type="date" id="trip-start" required /></label>
+            <label>End <input type="date" id="trip-end" required /></label>
+          </div>
+        </section>
+
+        <!-- Locations -->
+        <section class="card">
+          <h2>Locations</h2>
+          <p class="hint">
+            One or more places, each with its own date range (e.g. City A for the
+            first week, City B for the second).
+          </p>
+          <div id="locations-list"></div>
+          <button type="button" class="add-btn" data-add="location">
+            + Add location
+          </button>
+        </section>
+
+        <!-- Fixed commitments -->
+        <section class="card">
+          <h2>Fixed commitments <span class="optional">(optional)</span></h2>
+          <p class="hint">
+            Per-day things the planner should schedule around (e.g. "dinner with
+            family").
+          </p>
+          <div id="commitments-list"></div>
+          <button type="button" class="add-btn" data-add="commitment">
+            + Add commitment
+          </button>
+        </section>
+
+        <button type="submit" id="generate-btn" class="primary-btn">
+          Generate plan
+        </button>
+      </form>
+
+      <!-- Status + results -->
+      <div id="status" class="status" hidden></div>
+      <section id="results" hidden>
+        <div id="summary" class="card summary"></div>
+
+        <h2 class="results-heading">💡 Activity idea menus</h2>
+        <div id="menus"></div>
+
+        <h2 class="results-heading">🗓️ Day-by-day itinerary</h2>
+        <div id="itinerary"></div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
