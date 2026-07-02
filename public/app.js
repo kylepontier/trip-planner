@@ -27,6 +27,22 @@ osDark.addEventListener("change", (e) => {
   if (!localStorage.getItem("theme")) setTheme(e.matches ? "dark" : "light", false);
 });
 
+// ── Collapsible input rail (mobile) ─────────────────────────────────────
+// On narrow screens, once a plan exists, the rail collapses behind this toggle
+// so results get the space. On desktop the CSS keeps the form always shown.
+const railToggle = document.getElementById("rail-toggle");
+const sidebar = document.getElementById("sidebar");
+function paintRailToggle() {
+  railToggle.textContent = sidebar.classList.contains("collapsed")
+    ? "✎ Edit trip details"
+    : "▾ Hide trip details";
+}
+railToggle.addEventListener("click", () => {
+  sidebar.classList.toggle("collapsed");
+  paintRailToggle();
+});
+paintRailToggle();
+
 // ── Dynamic form rows ───────────────────────────────────────────────────
 // Each "Add" button appends a small row template; each row has its own remove
 // button. The number of kids/locations/commitments is simply the row count.
